@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2019, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -209,6 +209,10 @@ struct qpnp_vadc_chip {
 	struct sensor_device_attribute	sens_attr[0];
 };
 
+/* Huaqin add for P200204-04939 add spinlock for qpnp_get_vadc by qianyingdong at 2020/02/13 start */
+static DEFINE_SPINLOCK(qpnp_get_vadc_lock);
+/* Huaqin add for P200204-04939 add spinlock for qpnp_get_vadc by qianyingdong at 2020/02/13 end */
+
 LIST_HEAD(qpnp_vadc_device_list);
 
 static struct qpnp_vadc_scale_fn vadc_scale_fn[] = {
@@ -225,7 +229,6 @@ static struct qpnp_vadc_scale_fn vadc_scale_fn[] = {
 	[SCALE_QRD_SKUH_BATT_THERM] = {qpnp_adc_scale_qrd_skuh_batt_therm},
 	[SCALE_NCP_03WF683_THERM] = {qpnp_adc_scale_therm_ncp03},
 	[SCALE_QRD_SKUT1_BATT_THERM] = {qpnp_adc_scale_qrd_skut1_batt_therm},
-	[SCALE_QRD_SKUE_BATT_THERM] = {qpnp_adc_scale_qrd_skue_batt_therm},
 	[SCALE_PMI_CHG_TEMP] = {qpnp_adc_scale_pmi_chg_temp},
 	[SCALE_BATT_THERM_TEMP] = {qpnp_adc_batt_therm},
 	[SCALE_CHRG_TEMP] = {qpnp_adc_scale_chrg_temp},
@@ -236,7 +239,10 @@ static struct qpnp_vadc_scale_fn vadc_scale_fn[] = {
 	[SCALE_SMB1390_DIE_TEMP] = {qpnp_adc_scale_die_temp_1390},
 	[SCALE_BATT_THERM_TEMP_PU30] = {qpnp_adc_batt_therm_pu30},
 	[SCALE_BATT_THERM_TEMP_PU400] = {qpnp_adc_batt_therm_pu400},
-	[SCALE_BATT_THERM_TEMP_QRD_215] = {qpnp_adc_batt_therm_qrd_215}
+	[SCALE_BATT_THERM_TEMP_QRD_215] = {qpnp_adc_batt_therm_qrd_215},
+       /* Huaqin add for HS60-37 Configure battery NTC for charging by gaochao at 2019/07/11 start */
+	[SCALE_BATT_THERM_B3435_PU30] = {qpnp_adc_batt_therm_B3435_pu30},
+       /* Huaqin add for HS60-37 Configure battery NTC for charging by gaochao at 2019/07/11 end */
 };
 
 static struct qpnp_vadc_rscale_fn adc_vadc_rscale_fn[] = {
@@ -278,10 +284,18 @@ static int32_t qpnp_vadc_write_reg(struct qpnp_vadc_chip *vadc, int16_t reg,
 static int qpnp_vadc_is_valid(struct qpnp_vadc_chip *vadc)
 {
 	struct qpnp_vadc_chip *vadc_chip = NULL;
-
+	/* Huaqin add for P200204-04939 add spinlock for qpnp_get_vadc by qianyingdong at 2020/02/13 start */
+	spin_lock(&qpnp_get_vadc_lock);
 	list_for_each_entry(vadc_chip, &qpnp_vadc_device_list, list)
+	{
 		if (vadc == vadc_chip)
+		{
+			spin_unlock(&qpnp_get_vadc_lock);
 			return 0;
+		}
+	}
+	spin_unlock(&qpnp_get_vadc_lock);
+	/* Huaqin add for P200204-04939 add spinlock for qpnp_get_vadc by qianyingdong at 2020/02/13 end */
 
 	return -EINVAL;
 }
@@ -2023,10 +2037,18 @@ struct qpnp_vadc_chip *qpnp_get_vadc(struct device *dev, const char *name)
 	node = of_parse_phandle(dev->of_node, prop_name, 0);
 	if (node == NULL)
 		return ERR_PTR(-ENODEV);
-
+	/* Huaqin add for P200204-04939 add spinlock for qpnp_get_vadc by qianyingdong at 2020/02/13 start */
+	spin_lock(&qpnp_get_vadc_lock);
 	list_for_each_entry(vadc, &qpnp_vadc_device_list, list)
+	{
 		if (vadc->adc->pdev->dev.of_node == node)
+		{
+			spin_unlock(&qpnp_get_vadc_lock);
 			return vadc;
+		}
+	}
+	spin_unlock(&qpnp_get_vadc_lock);
+	/* Huaqin add for P200204-04939 add spinlock for qpnp_get_vadc by qianyingdong at 2020/02/13 end */
 	return ERR_PTR(-EPROBE_DEFER);
 }
 EXPORT_SYMBOL(qpnp_get_vadc);
@@ -2974,8 +2996,11 @@ static int qpnp_vadc_probe(struct platform_device *pdev)
 
 	vadc->vadc_iadc_sync_lock = false;
 	dev_set_drvdata(&pdev->dev, vadc);
+	/* Huaqin add for P200204-04939 add spinlock for qpnp_get_vadc by qianyingdong at 2020/02/13 start */
+	spin_lock(&qpnp_get_vadc_lock);
 	list_add(&vadc->list, &qpnp_vadc_device_list);
-
+	spin_unlock(&qpnp_get_vadc_lock);
+	/* Huaqin add for P200204-04939 add spinlock for qpnp_get_vadc by qianyingdong at 2020/02/13 end */
 	return 0;
 
 err_setup:
@@ -3006,7 +3031,11 @@ static int qpnp_vadc_remove(struct platform_device *pdev)
 		i++;
 	}
 	hwmon_device_unregister(vadc->vadc_hwmon);
+	/* Huaqin add for P200204-04939 add spinlock for qpnp_get_vadc by qianyingdong at 2020/02/13 start */
+	spin_lock(&qpnp_get_vadc_lock);
 	list_del(&vadc->list);
+	spin_unlock(&qpnp_get_vadc_lock);
+	/* Huaqin add for P200204-04939 add spinlock for qpnp_get_vadc by qianyingdong at 2020/02/13 end */
 	if (vadc->adc->hkadc_ldo && vadc->adc->hkadc_ldo_ok)
 		qpnp_adc_free_voltage_resource(vadc->adc);
 	dev_set_drvdata(&pdev->dev, NULL);

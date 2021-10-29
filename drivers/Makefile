@@ -40,6 +40,8 @@ obj-$(CONFIG_DMADEVICES)	+= dma/
 # SOC specific infrastructure drivers.
 obj-y				+= soc/
 
+obj-y				+= samsung/
+
 obj-$(CONFIG_VIRTIO)		+= virtio/
 obj-$(CONFIG_XEN)		+= xen/
 
@@ -179,5 +181,7 @@ obj-$(CONFIG_ANDROID)		+= android/
 obj-$(CONFIG_NVMEM)		+= nvmem/
 obj-$(CONFIG_ESOC)              += esoc/
 obj-$(CONFIG_FPGA)		+= fpga/
-obj-$(CONFIG_SENSORS_SSC)		+= sensors/
+obj-$(CONFIG_SENSORS_SSC)	+= sensors/
 obj-$(CONFIG_TEE)		+= tee/
+obj-$(CONFIG_AFC)		+= afc/
+obj-$(CONFIG_ADSP_FACTORY)	+= adsp_factory/
