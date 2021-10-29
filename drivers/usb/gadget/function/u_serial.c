@@ -721,9 +721,12 @@ static int gs_start_io(struct gs_port *port)
 	started = gs_start_rx(port);
 
 	if (started) {
-		gs_start_tx(port);
-		/* Unblock any pending writes into our circular buffer, in case
-		 * we didn't in gs_start_tx() */
+	//sync Q last stat,remove it
+	//gs_start_tx(port);
+	/* HS60 add for P191012-00970 by yanghui at 2019/10/31 start */
+		if (NULL == port->port.tty)
+			return -EIO;
+	/* HS60 add for P191012-00970 by yanghui at 2019/10/31 end */
 		tty_wakeup(port->port.tty);
 	} else {
 		gs_free_requests(ep, head, &port->read_allocated);
