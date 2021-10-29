@@ -438,6 +438,9 @@ enum qpnp_adc_scale_fn_type {
 	SCALE_BATT_THERM_TEMP_PU30,
 	SCALE_BATT_THERM_TEMP_PU400,
 	SCALE_BATT_THERM_TEMP_QRD_215,
+	/* Huaqin add for HS60-37 Configure battery NTC for charging by gaochao at 2019/07/11 start */
+	SCALE_BATT_THERM_B3435_PU30,
+       /* Huaqin add for HS60-37 Configure battery NTC for charging by gaochao at 2019/07/11 end */
 	SCALE_NONE,
 };
 
@@ -1391,6 +1394,29 @@ int32_t qpnp_adc_scale_default(struct qpnp_vadc_chip *dev,
 			const struct qpnp_adc_properties *adc_prop,
 			const struct qpnp_vadc_chan_properties *chan_prop,
 			struct qpnp_vadc_result *chan_rslt);
+
+/* Huaqin add for HS60-37 Configure battery NTC for charging by gaochao at 2019/07/11 start */
+/**
+* qpnp_adc_batt_therm_B3435_pu30() - Scales the pre-calibrated digital output
+* 		of an ADC to the ADC reference and compensates for the
+* 		gain and offset. Returns the temperature in decidegC.
+* 		It uses a mapping table computed for a 30K pull-up.
+* @dev: Structure device for qpnp vadc
+* @adc_code: pre-calibrated digital output of the ADC.
+* @adc_prop: adc properties of the adc such as bit resolution,
+* 		reference voltage.
+* @chan_prop: individual channel properties to compensate the i/p scaling,
+* 		slope and offset.
+* @chan_rslt: physical result to be stored.
+*/
+
+int32_t qpnp_adc_batt_therm_B3435_pu30(struct qpnp_vadc_chip *chip,
+		int32_t adc_code,
+		const struct qpnp_adc_properties *adc_properties,
+		const struct qpnp_vadc_chan_properties *chan_properties,
+		struct qpnp_vadc_result *adc_chan_result);
+/* Huaqin add for HS60-37 Configure battery NTC for charging by gaochao at 2019/07/11 end */
+
 /**
  * qpnp_iadc_scale_default() - Scales the pre-calibrated digital output
  *		of current ADC to the ADC reference and compensates for the

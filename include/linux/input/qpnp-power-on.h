@@ -50,6 +50,9 @@ enum pon_power_off_type {
 	PON_POWER_OFF_MAX_TYPE		= 0x10,
 };
 
+#if IS_ENABLED(CONFIG_SEC_DEBUG)
+#include <linux/sec_debug.h>
+#else
 enum pon_restart_reason {
 	/* 0 ~ 31 for common defined features */
 	PON_RESTART_REASON_UNKNOWN		= 0x00,
@@ -64,6 +67,7 @@ enum pon_restart_reason {
 	PON_RESTART_REASON_OEM_MIN		= 0x20,
 	PON_RESTART_REASON_OEM_MAX		= 0x3f,
 };
+#endif
 
 #ifdef CONFIG_INPUT_QPNP_POWER_ON
 int qpnp_pon_system_pwr_off(enum pon_power_off_type type);
