@@ -33,7 +33,9 @@
 #define CYCLES_PER_MICRO_SEC_DEFAULT 4915
 #define CCI_MAX_DELAY 1000000
 
-#define CCI_TIMEOUT msecs_to_jiffies(100)
+/*HS60 code for HS60-1461 by zhangpeng at 2019/09/09 start*/
+#define CCI_TIMEOUT msecs_to_jiffies(1000)
+/*HS60 code for HS60-1461 by zhangpeng at 2019/09/09 end*/
 
 /* TODO move this somewhere else */
 #define MSM_CCI_DRV_NAME "msm_cci"
