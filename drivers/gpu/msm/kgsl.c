@@ -2195,6 +2195,8 @@ static int kgsl_setup_anon_useraddr(struct kgsl_pagetable *pagetable,
 {
 	/* Map an anonymous memory chunk */
 
+	int ret;
+
 	if (size == 0 || offset != 0 ||
 		!IS_ALIGNED(size, PAGE_SIZE))
 		return -EINVAL;
@@ -2204,7 +2206,6 @@ static int kgsl_setup_anon_useraddr(struct kgsl_pagetable *pagetable,
 	entry->memdesc.flags |= (uint64_t)KGSL_MEMFLAGS_USERMEM_ADDR;
 
 	if (kgsl_memdesc_use_cpu_map(&entry->memdesc)) {
-		int ret;
 
 		/* Register the address in the database */
 		ret = kgsl_mmu_set_svm_region(pagetable,
@@ -2216,7 +2217,12 @@ static int kgsl_setup_anon_useraddr(struct kgsl_pagetable *pagetable,
 		entry->memdesc.gpuaddr = (uint64_t) hostptr;
 	}
 
-	return memdesc_sg_virt(&entry->memdesc, hostptr);
+	ret =  memdesc_sg_virt(&entry->memdesc, hostptr);
+
+	if (ret && kgsl_memdesc_use_cpu_map(&entry->memdesc))
+		kgsl_mmu_put_gpuaddr(&entry->memdesc);
+
+	return ret;
 }
 
 #ifdef CONFIG_DMA_SHARED_BUFFER
@@ -4909,6 +4915,25 @@ void kgsl_device_platform_remove(struct kgsl_device *device)
 }
 EXPORT_SYMBOL(kgsl_device_platform_remove);
 
+static int kgsl_sharedmem_size_notifier(struct notifier_block *nb,
+					unsigned long action, void *data)
+{
+	struct seq_file *s;
+
+	s = (struct seq_file *)data;
+	if (s != NULL)
+		seq_printf(s, "KgslSharedmem:  %8lu kB\n",
+			atomic_long_read(&kgsl_driver.stats.page_alloc) >> 10);
+	else
+		pr_cont("KgslSharedmem:%lukB ",
+			atomic_long_read(&kgsl_driver.stats.page_alloc) >> 10);
+	return 0;
+}
+
+static struct notifier_block kgsl_sharedmem_size_nb = {
+	.notifier_call = kgsl_sharedmem_size_notifier,
+};
+
 static void kgsl_core_exit(void)
 {
 	kgsl_events_exit();
@@ -4934,6 +4959,7 @@ static void kgsl_core_exit(void)
 
 	kgsl_memfree_exit();
 	unregister_chrdev_region(kgsl_driver.major, KGSL_DEVICE_MAX);
+	show_mem_extra_notifier_unregister(&kgsl_sharedmem_size_nb);
 }
 
 static int __init kgsl_core_init(void)
@@ -5026,6 +5052,8 @@ static int __init kgsl_core_init(void)
 		goto err;
 
 	kgsl_memfree_init();
+
+	show_mem_extra_notifier_register(&kgsl_sharedmem_size_nb);
 
 	return 0;
 
